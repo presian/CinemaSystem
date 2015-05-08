@@ -12,26 +12,52 @@ class Db:
         return self.cursor.execute("""SELECT * FROM movies ORDER BY rating DESC""")
 
     def getAllProjectionForMovie(self, movie_id, date=None):
+
         query = """SELECT
+                        m.name AS movie_name,
+                        p.id AS projection_id,
                         p.movie_id,
                         p.type,
                         p.date,
-                        p.time
+                        p.time,
                         (100 - COUNT(p.id)) AS spots_available
-                    FROM projections p
+                   FROM movies m
+                   LEFT JOIN projections p
+                   ON m.id = p.movie_id
                     LEFT JOIN reservations r
                     ON p.id = r.projection_id
                     WHERE
-                        p.movie_id = movie_id
+                        p.movie_id = ?
                         :dateCondition
                     GROUP BY p.id
                     ORDER BY date"""
+
         if date is None:
-            query.replace(':dateCondition', '')
-            return self.cursor.execute(query)
+            query = query.replace(':dateCondition', '')
+            return self.cursor.execute(query, (movie_id, ))
         else:
-            query.replace(':dateCondition', 'AND p.date = ?')
-            return self.cursor.execute(query, (date,))
+            query = query.replace(':dateCondition', 'AND p.date = ?')
+            return self.cursor.execute(query, (movie_id, date))
+
+    def seatsInRoom(self, projection_id):
+        query = """SELECT
+                        row,
+                        col
+                    FROM reservations
+                    WHERE projection_id = ?"""
+        return self.cursor.execute(query, (projection_id, ))
+
+    def chekIfSeatIsFree(self, projection_id, row, col):
+        query = """SELECT
+                        count(*) as count
+                    FROM reservations
+                    WHERE
+                        row = ? and col = ?
+                        and projection_id = ?"""
+        self.cursor.execute(query, (row, col, projection_id))
+        q = self.cursor.fetchone()
+        print(q[0])
+        return q[0] < 1
 
     # List of tuples -> [(username, projection_id, row, col), (username, projection_id, row, col), ...]
     def make_reservation(self, reservations):
