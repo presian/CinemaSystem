@@ -8,6 +8,9 @@ class Db:
         self.db.row_factory = sqlite3.Row
         self.cursor = self.db.cursor()
 
+    def get_movie_rating(self, movie_id):
+        return self.cursor.execute("""SELECT name, rating FROM movies WHERE id = ?""", (movie_id, ))
+
     def getAllMoviesOrderedByRating(self):
         return self.cursor.execute("""SELECT * FROM movies ORDER BY rating DESC""")
 
@@ -56,13 +59,12 @@ class Db:
                         and projection_id = ?"""
         self.cursor.execute(query, (row, col, projection_id))
         q = self.cursor.fetchone()
-        print(q[0])
         return q[0] < 1
 
     # List of tuples -> [(username, projection_id, row, col), (username, projection_id, row, col), ...]
     def make_reservation(self, reservations):
-        self.cursor.executemany("""INSERT INTO reservations(username, projection_id, row, col)
-            VALUES(?, ?, ?, ?)""", reservations)
+        self.cursor.execute("""INSERT INTO reservations(username, projection_id, row, col)
+            VALUES(?, ?, ?, ?)""", (reservations[0], reservations[1], reservations[2], reservations[3]))
         self.db.commit()
 
     def cancel_reservation(self, name):

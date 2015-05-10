@@ -9,13 +9,19 @@ class PrintData:
 
     def print_table(self, seat):
         a = [["." for x in range(self.start, self.end)] for y in range(self.start, self.end)]
+        table = ""
         seat = list(seat)
         for row in range(self.start, self.end):
             for col in range(self.start, self.end):
                 for elem in seat:
                     if elem[0] == row and elem[1] == col:
                         a[row-1][col-1] = 'X'
-        print(a)
+        for elem in a:
+            for row in elem:
+                table += row
+                table += " "
+            table += '\n'
+        print(table)
 
     def showMenu(self):
         print("""========================
@@ -28,7 +34,6 @@ class PrintData:
             \n========================""")
 
     def show_movies(self, movies):
-        #movies = self.data.getAllMoviesOrderedByRating()
         for movie in movies:
             print("[{}] - {} ({})".format(movie["id"], movie["name"], movie["rating"]))
 
@@ -37,7 +42,7 @@ class PrintData:
             print("[{}] - {} {} ({}) - {} spots available".format(movie["projection_id"], movie["date"], movie["time"], movie["type"], movie["spots_available"]))
 
     def make_reservation(self):
-        print("A reservation was made")
+        print("Thanks.The reservation was made")
 
     def cancel_reservation(self):
         print("A reservation was cancelled")
@@ -46,8 +51,6 @@ class PrintData:
 
 def main():
     pass
-    #mine = PrintData()
-    #mine.print_table()
-    #mine.cancel_reservation()
+
 if __name__ == '__main__':
     main()
