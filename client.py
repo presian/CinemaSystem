@@ -6,34 +6,7 @@ class Client:
 
     def __init__(self):
         self.printer = PrintData()
-        self.db = Db('cinemasystem')
-
-    def showMenu(self):
-        print("""========================
-            \n1.show_movies
-            \n2.show_movie_projections
-            \n3.make_reservation
-            \n4.cancel_reservation
-            \n5.Exit
-            \n6.Help
-            \n========================""")
-
-    def getUserOption(self):
-        return int(input('Please choise a option(digit): '))
-
-    def commandExecutor(self, option):
-        if option == 1:
-            self.show_movies()
-        elif option == 2:
-            self.show_movie_projections()
-        elif option == 3:
-            self.make_reservation()
-        elif option == 4:
-            self.cancel_reservation()
-        elif option == 5:
-            return
-        elif option == 6:
-            self.printer.print_help()
+        self.db = Db('cinemasystem.db')
 
     def show_movies(self):
         result = self.db.getAllMoviesOrderedByRating()
@@ -46,75 +19,107 @@ class Client:
         except:
             print('Your data is invalid!')
         result = self.db.getAllProjectionForMovie(movie_id, date if not date == '' else None)
-        self.printer.show_movie_projections(result)
+        self.printer.show_movie_projection(result)
 
-        # list_commands = tuple()
-        # for command in ["Step 1 (User): Choose name>", "Step 1 (User): Choose number of tickets>", "Step 2 (Movie): Choose a movie>", "Step 3 (Projection): Choose a projection> 5", "Step 4 (Seats): Choose seat 1>","Step 5 (Confirm - type 'finalize') >"]:
-        #     value = input(command)
-        #     if command == "Step 1 (User): Choose number of tickets>":
-        #         print("Current movies:")
-        #         self.show_movies()
-        #     elif command == "Step 2 (Movie): Choose a movie>":
-        #         self.show_movie_projection()
-        #         movies = self.data.getAllMoviesOrderedByRating()
-        #         for movie in movies:
-        #             movie_name = movie["{}".format(value)]
-        #         print("Projections for movie {}:".format(movie_name))
-
-        #     list_commands += (value, )
-        # return list_commands
-
-    def make_reservation(self):
-        list_commands = tuple()
-        for command in ["Step 1 (User): Choose name>", "Step 1 (User): Choose number of tickets>", "Step 2 (Movie): Choose a movie>", "Step 3 (Projection): Choose a projection> 5", "Step 4 (Seats): Choose seat 1>", "Step 5 (Confirm - type 'finalize') >"]:
-            if command == "Step 1 (User): Choose number of tickets>":
-                print("Current movies:")
-                self.printer.show_movies()
-            elif command == "Step 2 (Movie): Choose a movie>":
-                self.printer.show_movie_projection()
-                movies = self.data.getAllMoviesOrderedByRating()
-                self.printer.show_movies(movies)
-            value = input(command)
-
-            list_commands += (value, )
+    def user_commands(self):
         exit = False
-        username = input('Enter username: ')
+        list_commands = tuple()
         reservations = []
         while not exit:
-            try:
-                projection_id = int(input('Enter projection_id: '))
-
-                # todo make validation for id -> raise exception
-                row = int(input('Please enter a row: '))
-                # todo make validation for row -> raise exception
-                col = int(input('Please enter a column: '))
-                # todo make validation for column -> raise exception
-
-                reservations.append((username, projection_id, row, col))
-            except:
-                print('Ypur data is invalid! Please try again!')
+            for command in ["Step 1 (User): Choose name>", "Step 1 (User): Choose number of tickets>", "Step 2 (Movie): Choose a movie>", "Step 3 (Projection): Choose a projection>"]:
+                value = input(command)
+                if command == "Step 1 (User): Choose name>":
+                    username = value
+                elif command == "Step 1 (User): Choose number of tickets>":
+                    print("Current movies:")
+                    tickets = int(value)
+                    value = int(value)
+                    self.show_movies()
+                elif command == "Step 2 (Movie): Choose a movie>":
+                    if " " in value:
+                        array = value.split(" ")
+                        digit = int(array[0])
+                        movies = self.db.get_movie_rating(digit).fetchone()
+                        data = array[1]
+                        value = digit
+                        print("Projecion for movie {}".format(movies[0]))
+                        projection = self.db.getAllProjectionForMovie(digit, data)
+                        self.printer.show_movie_projection(projection)
+                    else:
+                        value = int(value)
+                        movies = self.db.get_movie_rating(value).fetchone()
+                        print("Projecion for movie {}".format(movies[0]))
+                        projection = self.db.getAllProjectionForMovie(value)
+                        self.printer.show_movie_projection(projection)
+                elif command == "Step 3 (Projection): Choose a projection>":
+                    print("Available seats (marked with a dot):")
+                    self.printer.print_table(self.db.seatsInRoom(int(value)))
+                    value = int(value)
+                    cnt = 1
+                    while cnt <= tickets:
+                        seat = self.choose_seat(cnt)
+                        if self.db.chekIfSeatIsFree(value, seat[0], seat[1]) is True:
+                            list_commands += (seat, )
+                            print("""This is your reservation:
+                                Movie: {} ({})
+                                Seats: {}""".format(movies[0], movies[1], seat))
+                            ready_data = (username, value, seat[0], seat[1])
+                            confirm = input("Step 5 (Confirm - type 'finalize') > ")
+                            if confirm == "finalize":
+                                cnt += 1
+                                self.db.make_reservation(ready_data)
+                                self.printer.make_reservation()
+                        else:
+                            print('This seat is already taken!')
+                list_commands += (value, )
+            reservations.append(list_commands)
             enter_again = ''
-            while enter_again != 'n' or enter_again != 'y':
+            while enter_again != 'y':
                 enter_again = input('Are you want to make another reservation!(y/n)')
-            if enter_again == 'n':
-                exit = True
-        if len(reservations) > 0:
-            self.db.make_reservation()
-            # print success message or error (try/catch)
-        else:
-            self.showMenu()
+                if enter_again == 'n':
+                    enter_again = 'y'
+                    exit = True
+
+    def choose_seat(self, num):
+        seats = tuple()
+        print("Step 4 (Seats): Choose seat {}>".format(num))
+        try:
+            row = int(input('Please enter a row: '))
+            col = int(input('Please enter a column: '))
+            seats += (row, col)
+            return seats
+        except:
+            return 'Your data is invalid! Please try again!'
+
+    def start(self):
+        command = "Enter 'Help' to see the commands:"
+        print(command)
+        while command != "Exit":
+            command = input("Enter a command >")
+            if command == "Help":
+                self.printer.showMenu()
+            elif command == "make_reservation":
+                self.user_commands()
+            elif command == "show_movies":
+                self.show_movies()
+            elif command == "show_movie_projections":
+                self.show_movie_projections()
+            elif command == "cancel_reservation":
+                self.cancel_reservation()
+        print("You exited the App!")
 
     def cancel_reservation(self):
         name = input('Enter a username: ')
         try:
             self.db.cancel_reservation(name)
+            self.printer.cancel_reservation()
         except:
             print('Your data is invalid')
 
-if __name__ == '__main__':
+
+def main():
     client = Client()
-    exit = False
-    while not exit:
-        client.showMenu()
-        option = client.getUserOption()
-        client.commandExecutor(option)
+    client.start()
+
+if __name__ == '__main__':
+    main()
