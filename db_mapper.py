@@ -23,7 +23,7 @@ class Db:
                         p.type,
                         p.date,
                         p.time,
-                        (100 - COUNT(p.id)) AS spots_available
+                        (100 - COUNT(r.projection_id)) AS spots_available
                    FROM movies m
                    LEFT JOIN projections p
                    ON m.id = p.movie_id

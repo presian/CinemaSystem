@@ -1,6 +1,3 @@
-import sqlite3
-from db_mapper import Db
-
 class PrintData:
 
     def __init__(self):
@@ -46,7 +43,6 @@ class PrintData:
 
     def cancel_reservation(self):
         print("A reservation was cancelled")
-
 
 
 def main():
